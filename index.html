@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f8f8f8;
+        }
+
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="flappyBirdCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("flappyBirdCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Load images
+        const background = new Image();
+        const bird = new Image();
+        background.src = "https://i.ibb.co/tqvynLF/bg-1.png";
+        bird.src = "https://i.ibb.co/S30W3pg/frame-1.png";
+
+        // Load pipe image (you can replace this with a green pipe image)
+        const pipe = new Image();
+        pipe.src = ""; // You can provide a URL for the pipe image
+
+        // Load medal images
+        const bronzeMedal = new Image();
+        const silverMedal = new Image();
+        const goldMedal = new Image();
+        const platinumMedal = new Image();
+        bronzeMedal.src = "https://i.ibb.co/rv5Hqb8/Bronze-medal.jpg";
+        silverMedal.src = "https://i.ibb.co/d2j2fpR/Silver-Medal-Transparent-PNG-Clip-Art-Image.png";
+        goldMedal.src = "https://i.ibb.co/xGXwwkj/gold-metal.jpg"
+        platinumMedal.src = "https://i.ibb.co/gZ2pKHZ/platinum-medal.jpg";
+
+        // Game variables
+        let birdY = canvas.height / 2 - 25;
+        let gravity = 1;
+        let velocity = 0;
+        let pipes = [];
+        let pipeGap = 400; // Initial gap between pipes
+        let pipeWidth = 30;
+        let score = 0;
+        let gameStarted = false;
+
+        // Variables for difficulty progression
+        let difficultyMultiplier = 1.0; // Adjust this value to control difficulty progression
+
+        // Handle key presses
+        document.addEventListener("keydown", handleKeyPress);
+
+        function handleKeyPress(event) {
+            if (event.code === "Space") {
+                if (!gameStarted) {
+                    startGame();
+                } else {
+                    flap();
+                }
+            }
+        }
+
+        // Handle mouse clicks for mobile devices
+        document.addEventListener("click", function () {
+            if (!gameStarted) {
+                startGame();
+            } else {
+                flap();
+            }
+        });
+
+        // Start the game
+        function startGame() {
+            gameStarted = true;
+            pipes = [];
+            score = 0;
+            birdY = canvas.height / 2 - 25;
+            velocity = 0;
+            difficultyMultiplier = 1.0;
+            requestAnimationFrame(draw);
+        }
+
+        function flap() {
+            velocity = -15;
+        }
+
+        // Game loop
+        function draw() {
+            // Draw background
+            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+            // Move bird
+            velocity += gravity;
+            birdY += velocity;
+
+            // Draw bird
+            ctx.drawImage(bird, 50, birdY, 50, 50);
+
+            // Draw pipes
+            if (gameStarted) {
+                if (Math.random() < 0.01 * difficultyMultiplier) {
+                    pipes.push({
+                        x: canvas.width,
+                        gapY: Math.floor(Math.random() * (canvas.height - pipeGap)),
+                    });
+                }
+
+                for (let i = 0; i < pipes.length; i++) {
+                    const currentPipe = pipes[i];
+                    const pipeX = currentPipe.x;
+                    const gapY = currentPipe.gapY;
+
+                    // Draw top pipe
+                    ctx.fillStyle = "green"; // Change color as needed
+                    ctx.fillRect(pipeX, 0, pipeWidth, gapY);
+
+                    // Draw bottom pipe
+                    const bottomPipeHeight = canvas.height - gapY - pipeGap;
+                    ctx.fillRect(pipeX, gapY + pipeGap, pipeWidth, bottomPipeHeight);
+
+                    // Move pipes
+                    currentPipe.x -= 5 * difficultyMultiplier; // Adjust speed based on difficulty
+
+                    // Check for collisions
+                    if (
+                        birdY < 0 ||
+                        birdY + 50 > canvas.height ||
+                        (birdY < gapY || birdY + 50 > gapY + pipeGap) &&
+                        (pipeX < 50 && pipeX + pipeWidth > 0)
+                    ) {
+                        // Game over
+                        gameStarted = false;
+                        displayGameOver();
+                        return; // Stop the game loop
+                    }
+
+                    // Check for scoring
+                    if (pipeX === 50) {
+                        score++;
+                    }
+                }
+
+                // Remove off-screen pipes
+                pipes = pipes.filter((pipe) => pipe.x + pipeWidth > 0);
+            }
+
+            // Display score
+            ctx.fillStyle = "#000";
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, canvas.width - 120, 30);
+
+            // Repeat the game loop if the game is still active
+            if (gameStarted) {
+                requestAnimationFrame(draw);
+            }
+        }
+
+        function displayGameOver() {
+            // Display game over message and score
+            ctx.fillStyle = "#000";
+            ctx.font = "30px Arial";
+            ctx.fillText("Game Over! Your score: " + score, canvas.width / 4, canvas.height / 2);
+
+            // Display medal based on the score
+            let medalImage;
+            if (score >= 40) {
+                medalImage = platinumMedal;
+            } else if (score >= 30) {
+                medalImage = goldMedal;
+            } else if (score >= 20) {
+                medalImage = silverMedal;
+            } else if (score >= 10) {
+                medalImage = bronzeMedal;
+            }
+
+            if (medalImage) {
+                // Draw medal
+                ctx.drawImage(medalImage, canvas.width / 2 - 50, canvas.height / 2 + 40, 100, 100);
+
+                // Display congratulatory message
+                ctx.fillStyle = "#000";
+                ctx.font = "20px Arial";
+                ctx.fillText("Congratulations! You've earned a medal!", canvas.width / 4, canvas.height / 2 + 160);
+            } else {
+                // Display try again message
+                ctx.fillStyle = "#000";
+                ctx.font = "20px Arial";
+                ctx.fillText("No Medal. Try again!", canvas.width / 4, canvas.height / 2 + 40);
+            }
+        }
+    </script>
+</body>
+</html>
+
